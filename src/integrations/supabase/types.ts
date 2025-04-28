@@ -9,7 +9,152 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      blood_inventory: {
+        Row: {
+          blood_type: Database["public"]["Enums"]["blood_type"]
+          created_at: string
+          expiry_date: string
+          id: string
+          location: string
+          quantity_ml: number
+          updated_at: string
+        }
+        Insert: {
+          blood_type: Database["public"]["Enums"]["blood_type"]
+          created_at?: string
+          expiry_date: string
+          id?: string
+          location: string
+          quantity_ml?: number
+          updated_at?: string
+        }
+        Update: {
+          blood_type?: Database["public"]["Enums"]["blood_type"]
+          created_at?: string
+          expiry_date?: string
+          id?: string
+          location?: string
+          quantity_ml?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      blood_requests: {
+        Row: {
+          blood_type: Database["public"]["Enums"]["blood_type"]
+          created_at: string
+          hospital: string
+          id: string
+          quantity_ml: number
+          requester_email: string
+          requester_name: string
+          requester_phone: string
+          status: string
+          updated_at: string
+          urgency: string
+        }
+        Insert: {
+          blood_type: Database["public"]["Enums"]["blood_type"]
+          created_at?: string
+          hospital: string
+          id?: string
+          quantity_ml: number
+          requester_email: string
+          requester_name: string
+          requester_phone: string
+          status?: string
+          updated_at?: string
+          urgency: string
+        }
+        Update: {
+          blood_type?: Database["public"]["Enums"]["blood_type"]
+          created_at?: string
+          hospital?: string
+          id?: string
+          quantity_ml?: number
+          requester_email?: string
+          requester_name?: string
+          requester_phone?: string
+          status?: string
+          updated_at?: string
+          urgency?: string
+        }
+        Relationships: []
+      }
+      donation_records: {
+        Row: {
+          blood_type: Database["public"]["Enums"]["blood_type"]
+          created_at: string
+          donation_date: string
+          donor_id: string | null
+          id: string
+          location: string
+          quantity_ml: number
+        }
+        Insert: {
+          blood_type: Database["public"]["Enums"]["blood_type"]
+          created_at?: string
+          donation_date: string
+          donor_id?: string | null
+          id?: string
+          location: string
+          quantity_ml: number
+        }
+        Update: {
+          blood_type?: Database["public"]["Enums"]["blood_type"]
+          created_at?: string
+          donation_date?: string
+          donor_id?: string | null
+          id?: string
+          location?: string
+          quantity_ml?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "donation_records_donor_id_fkey"
+            columns: ["donor_id"]
+            isOneToOne: false
+            referencedRelation: "donors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      donors: {
+        Row: {
+          blood_type: Database["public"]["Enums"]["blood_type"]
+          created_at: string
+          date_of_birth: string
+          email: string
+          full_name: string
+          id: string
+          phone_number: string
+          previous_donor: boolean
+          updated_at: string
+        }
+        Insert: {
+          blood_type: Database["public"]["Enums"]["blood_type"]
+          created_at?: string
+          date_of_birth: string
+          email: string
+          full_name: string
+          id?: string
+          phone_number: string
+          previous_donor?: boolean
+          updated_at?: string
+        }
+        Update: {
+          blood_type?: Database["public"]["Enums"]["blood_type"]
+          created_at?: string
+          date_of_birth?: string
+          email?: string
+          full_name?: string
+          id?: string
+          phone_number?: string
+          previous_donor?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +163,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      blood_type: "A+" | "A-" | "B+" | "B-" | "AB+" | "AB-" | "O+" | "O-"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +278,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      blood_type: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
+    },
   },
 } as const

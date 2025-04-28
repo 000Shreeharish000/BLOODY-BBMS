@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 
 export function DonorForm() {
   const { toast } = useToast();
@@ -26,14 +27,65 @@ export function DonorForm() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    
+    if (!formData.fullName) errors.fullName = "Full name is required";
+    if (!formData.email) errors.email = "Email is required";
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) errors.email = "Email is invalid";
+    if (!formData.phoneNumber) errors.phoneNumber = "Phone number is required";
+    if (!formData.bloodType) errors.bloodType = "Blood type is required";
+    if (!formData.dateOfBirth) errors.dateOfBirth = "Date of birth is required";
+    if (!formData.agreeToDonate) errors.agreeToDonate = "You must agree to donate";
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      toast({
+        title: "Form Validation Failed",
+        description: "Please check the form and fix any errors.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     
-    // Simulate form submission
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      // Format the date for PostgreSQL (YYYY-MM-DD)
+      const formattedDate = formData.dateOfBirth ? format(formData.dateOfBirth, 'yyyy-MM-dd') : null;
+      
+      const { data, error } = await supabase
+        .from('donors')
+        .insert([
+          {
+            full_name: formData.fullName,
+            email: formData.email,
+            phone_number: formData.phoneNumber,
+            blood_type: formData.bloodType,
+            date_of_birth: formattedDate,
+            previous_donor: formData.previousDonor,
+          }
+        ]);
+    
+      if (error) {
+        console.error("Error submitting donor form:", error);
+        toast({
+          title: "Registration Failed",
+          description: error.message || "There was a problem with your registration. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Successful submission
       setIsSuccess(true);
       toast({
         title: "Registration successful!",
@@ -53,7 +105,16 @@ export function DonorForm() {
           previousDonor: false
         });
       }, 2000);
-    }, 1500);
+    } catch (error) {
+      console.error("Exception in donor registration:", error);
+      toast({
+        title: "Something went wrong",
+        description: "There was a problem with your registration. Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -62,6 +123,13 @@ export function DonorForm() {
       ...formData,
       [name]: value
     });
+    // Clear error when field is edited
+    if (formErrors[name]) {
+      setFormErrors({
+        ...formErrors,
+        [name]: ""
+      });
+    }
   };
 
   if (isSuccess) {
@@ -102,7 +170,9 @@ export function DonorForm() {
             <form onSubmit={handleSubmit}>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
+                  <Label htmlFor="fullName" className={formErrors.fullName ? "text-destructive" : ""}>
+                    Full Name
+                  </Label>
                   <Input
                     id="fullName"
                     name="fullName"
@@ -110,12 +180,18 @@ export function DonorForm() {
                     required
                     value={formData.fullName}
                     onChange={handleInputChange}
+                    className={formErrors.fullName ? "border-destructive" : ""}
                   />
+                  {formErrors.fullName && (
+                    <p className="text-sm text-destructive">{formErrors.fullName}</p>
+                  )}
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email" className={formErrors.email ? "text-destructive" : ""}>
+                      Email
+                    </Label>
                     <Input
                       id="email"
                       name="email"
@@ -124,10 +200,16 @@ export function DonorForm() {
                       required
                       value={formData.email}
                       onChange={handleInputChange}
+                      className={formErrors.email ? "border-destructive" : ""}
                     />
+                    {formErrors.email && (
+                      <p className="text-sm text-destructive">{formErrors.email}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="phoneNumber">Phone Number</Label>
+                    <Label htmlFor="phoneNumber" className={formErrors.phoneNumber ? "text-destructive" : ""}>
+                      Phone Number
+                    </Label>
                     <Input
                       id="phoneNumber"
                       name="phoneNumber"
@@ -135,20 +217,29 @@ export function DonorForm() {
                       required
                       value={formData.phoneNumber}
                       onChange={handleInputChange}
+                      className={formErrors.phoneNumber ? "border-destructive" : ""}
                     />
+                    {formErrors.phoneNumber && (
+                      <p className="text-sm text-destructive">{formErrors.phoneNumber}</p>
+                    )}
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="bloodType">Blood Type</Label>
+                    <Label htmlFor="bloodType" className={formErrors.bloodType ? "text-destructive" : ""}>
+                      Blood Type
+                    </Label>
                     <Select 
                       value={formData.bloodType}
-                      onValueChange={(value) => 
-                        setFormData({...formData, bloodType: value})
-                      }
+                      onValueChange={(value) => {
+                        setFormData({...formData, bloodType: value});
+                        if (formErrors.bloodType) {
+                          setFormErrors({...formErrors, bloodType: ""});
+                        }
+                      }}
                     >
-                      <SelectTrigger id="bloodType">
+                      <SelectTrigger id="bloodType" className={formErrors.bloodType ? "border-destructive" : ""}>
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -163,16 +254,22 @@ export function DonorForm() {
                         <SelectItem value="Unknown">I don't know</SelectItem>
                       </SelectContent>
                     </Select>
+                    {formErrors.bloodType && (
+                      <p className="text-sm text-destructive">{formErrors.bloodType}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                    <Label htmlFor="dateOfBirth" className={formErrors.dateOfBirth ? "text-destructive" : ""}>
+                      Date of Birth
+                    </Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
                           variant={"outline"}
                           className={cn(
                             "w-full justify-start text-left font-normal",
-                            !formData.dateOfBirth && "text-muted-foreground"
+                            !formData.dateOfBirth && "text-muted-foreground",
+                            formErrors.dateOfBirth && "border-destructive"
                           )}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
@@ -187,9 +284,12 @@ export function DonorForm() {
                         <Calendar
                           mode="single"
                           selected={formData.dateOfBirth}
-                          onSelect={(date) => 
-                            setFormData({...formData, dateOfBirth: date})
-                          }
+                          onSelect={(date) => {
+                            setFormData({...formData, dateOfBirth: date});
+                            if (formErrors.dateOfBirth) {
+                              setFormErrors({...formErrors, dateOfBirth: ""});
+                            }
+                          }}
                           initialFocus
                           disabled={(date) => 
                             date > new Date() || 
@@ -198,6 +298,9 @@ export function DonorForm() {
                         />
                       </PopoverContent>
                     </Popover>
+                    {formErrors.dateOfBirth && (
+                      <p className="text-sm text-destructive">{formErrors.dateOfBirth}</p>
+                    )}
                   </div>
                 </div>
                 
@@ -221,21 +324,30 @@ export function DonorForm() {
                   <Checkbox 
                     id="agreeToDonate"
                     checked={formData.agreeToDonate}
-                    onCheckedChange={(checked) => 
-                      setFormData({...formData, agreeToDonate: checked as boolean})
-                    }
-                    required
+                    onCheckedChange={(checked) => {
+                      setFormData({...formData, agreeToDonate: checked as boolean});
+                      if (formErrors.agreeToDonate) {
+                        setFormErrors({...formErrors, agreeToDonate: ""});
+                      }
+                    }}
+                    className={formErrors.agreeToDonate ? "border-destructive" : ""}
                   />
                   <div className="grid gap-1.5 leading-none">
                     <label
                       htmlFor="agreeToDonate"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      className={cn(
+                        "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
+                        formErrors.agreeToDonate && "text-destructive"
+                      )}
                     >
                       Consent to Donate
                     </label>
                     <p className="text-xs text-muted-foreground">
                       I agree to donate blood and confirm that I am at least 18 years old and in good health.
                     </p>
+                    {formErrors.agreeToDonate && (
+                      <p className="text-sm text-destructive">{formErrors.agreeToDonate}</p>
+                    )}
                   </div>
                 </div>
               </CardContent>

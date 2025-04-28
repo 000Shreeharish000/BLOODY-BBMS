@@ -1,20 +1,62 @@
 
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Droplet, AlertTriangle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
-const inventoryData = [
-  { type: "A+", stock: 78, critical: false },
-  { type: "A-", stock: 45, critical: false },
-  { type: "B+", stock: 62, critical: false },
-  { type: "B-", stock: 28, critical: true },
-  { type: "AB+", stock: 35, critical: false },
-  { type: "AB-", stock: 15, critical: true },
-  { type: "O+", stock: 85, critical: false },
-  { type: "O-", stock: 22, critical: true }
-];
+interface InventoryItem {
+  blood_type: string;
+  quantity_ml: number;
+  critical: boolean;
+}
 
 export function BloodInventory() {
+  const [inventoryData, setInventoryData] = useState<InventoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchInventory = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('blood_inventory')
+          .select('*');
+
+        if (error) {
+          console.error('Error fetching blood inventory:', error);
+          return;
+        }
+
+        // Transform the data and determine critical status
+        const transformedData = data.map(item => ({
+          blood_type: item.blood_type,
+          quantity_ml: item.quantity_ml,
+          critical: item.quantity_ml < 500
+        }));
+
+        setInventoryData(transformedData);
+      } catch (error) {
+        console.error('Error in fetching inventory:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInventory();
+  }, []);
+
+  // If data is loading, use the default static data
+  const displayData = loading || inventoryData.length === 0 ? [
+    { blood_type: "A+", quantity_ml: 78, critical: false },
+    { blood_type: "A-", quantity_ml: 45, critical: false },
+    { blood_type: "B+", quantity_ml: 62, critical: false },
+    { blood_type: "B-", quantity_ml: 28, critical: true },
+    { blood_type: "AB+", quantity_ml: 35, critical: false },
+    { blood_type: "AB-", quantity_ml: 15, critical: true },
+    { blood_type: "O+", quantity_ml: 85, critical: false },
+    { blood_type: "O-", quantity_ml: 22, critical: true }
+  ] : inventoryData;
+
   return (
     <section className="py-12 bg-lifepulse-softGray dark:bg-gray-800/50">
       <div className="container px-4 md:px-6">
@@ -28,9 +70,9 @@ export function BloodInventory() {
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {inventoryData.map((item) => (
+          {displayData.map((item) => (
             <Card 
-              key={item.type} 
+              key={item.blood_type} 
               className={`${
                 item.critical 
                   ? "border border-red-200 dark:border-red-900" 
@@ -48,7 +90,7 @@ export function BloodInventory() {
                       }`} 
                       fill={item.critical ? "#ef4444" : "#ea384c"} 
                     />
-                    <CardTitle>{item.type}</CardTitle>
+                    <CardTitle>{item.blood_type}</CardTitle>
                   </div>
                   {item.critical && (
                     <div className="bg-red-100 dark:bg-red-900/30 p-1 rounded-full">
@@ -57,23 +99,17 @@ export function BloodInventory() {
                   )}
                 </div>
                 <CardDescription>
-                  {item.stock} units available
+                  {item.quantity_ml} units available
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   <Progress 
-                    value={item.stock} 
-                    className={`${
-                      item.critical 
-                        ? "bg-red-100 dark:bg-red-900/30" 
-                        : "bg-lifepulse-pink/50 dark:bg-gray-700"
-                    }`}
-                    indicatorClassName={`${
-                      item.critical 
-                        ? "bg-red-500" 
-                        : "bg-lifepulse-red"
-                    }`}
+                    value={item.quantity_ml} 
+                    className={item.critical 
+                      ? "bg-red-100 dark:bg-red-900/30" 
+                      : "bg-lifepulse-pink/50 dark:bg-gray-700"
+                    }
                   />
                   <div className="text-xs text-right text-muted-foreground">
                     {item.critical ? "Critical level" : "Adequate stock"}

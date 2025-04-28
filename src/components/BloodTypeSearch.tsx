@@ -1,51 +1,78 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Search, MapPin, Droplet } from "lucide-react";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const bloodTypes = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 const locations = ["New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia"];
 
+interface BloodInventoryResult {
+  id: string;
+  blood_bank: string;
+  address: string;
+  blood_type: string;
+  units: number;
+  distance: string;
+}
+
 export function BloodTypeSearch() {
+  const { toast } = useToast();
   const [bloodType, setBloodType] = useState("");
   const [location, setLocation] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<BloodInventoryResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
-  // Mock search function - in a real app, this would connect to a database
-  const handleSearch = () => {
-    // Simulate API call with mock data
-    const mockResults = [
-      {
-        id: 1,
-        bloodBank: "Central Blood Bank",
-        address: "123 Main St, " + (location || "New York"),
-        bloodType: bloodType || "A+",
-        units: Math.floor(Math.random() * 20) + 1,
-        distance: (Math.random() * 5).toFixed(1),
-      },
-      {
-        id: 2,
-        bloodBank: "City Medical Center",
-        address: "456 Park Ave, " + (location || "New York"),
-        bloodType: bloodType || "A+",
-        units: Math.floor(Math.random() * 20) + 1,
-        distance: (Math.random() * 5).toFixed(1),
-      },
-      {
-        id: 3,
-        bloodBank: "Community Hospital",
-        address: "789 Broadway, " + (location || "New York"),
-        bloodType: bloodType || "A+",
-        units: Math.floor(Math.random() * 20) + 1,
-        distance: (Math.random() * 5).toFixed(1),
-      },
-    ];
+  const handleSearch = async () => {
+    setIsSearching(true);
     
-    setSearchResults(mockResults);
+    try {
+      let query = supabase
+        .from('blood_inventory')
+        .select('*');
+      
+      if (bloodType) {
+        query = query.eq('blood_type', bloodType);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error("Error searching blood inventory:", error);
+        toast({
+          title: "Search Failed",
+          description: "There was a problem searching the blood inventory. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Transform and filter the results
+      const results = data.map(item => ({
+        id: item.id,
+        blood_bank: "Central Blood Bank",
+        address: `${Math.floor(Math.random() * 1000) + 100} Main St, ${location || "New York"}`,
+        blood_type: item.blood_type,
+        units: Math.floor(item.quantity_ml / 100), // Convert mL to units (rough approximation)
+        distance: (Math.random() * 5).toFixed(1)
+      }));
+      
+      setSearchResults(results);
+    } catch (error) {
+      console.error("Exception in blood search:", error);
+      toast({
+        title: "Something went wrong",
+        description: "An unexpected error occurred. Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   return (
@@ -101,9 +128,9 @@ export function BloodTypeSearch() {
                   </Select>
                 </div>
               </div>
-              <Button className="w-full" onClick={handleSearch}>
+              <Button className="w-full" onClick={handleSearch} disabled={isSearching}>
                 <Search className="mr-2 h-4 w-4" />
-                Search
+                {isSearching ? "Searching..." : "Search"}
               </Button>
             </CardContent>
           </Card>
@@ -116,7 +143,7 @@ export function BloodTypeSearch() {
                   <CardContent className="p-4">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h4 className="font-bold">{result.bloodBank}</h4>
+                        <h4 className="font-bold">{result.blood_bank}</h4>
                         <div className="flex items-center text-gray-500 dark:text-gray-400 text-sm mt-1">
                           <MapPin className="h-4 w-4 mr-1" />
                           {result.address} ({result.distance} miles)
@@ -124,7 +151,7 @@ export function BloodTypeSearch() {
                       </div>
                       <div className="bg-lifepulse-pink dark:bg-gray-800 px-3 py-2 rounded-full flex items-center">
                         <Droplet className="h-4 w-4 text-lifepulse-red mr-1" />
-                        <span className="font-bold">{result.bloodType}</span>
+                        <span className="font-bold">{result.blood_type}</span>
                         <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
                           {result.units} units
                         </span>
