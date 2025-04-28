@@ -13,6 +13,9 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { Database } from "@/integrations/supabase/types";
+
+type BloodType = Database["public"]["Enums"]["blood_type"];
 
 export function DonorForm() {
   const { toast } = useToast();
@@ -20,7 +23,7 @@ export function DonorForm() {
     fullName: "",
     email: "",
     phoneNumber: "",
-    bloodType: "",
+    bloodType: "" as BloodType | "",
     dateOfBirth: undefined as Date | undefined,
     agreeToDonate: false,
     previousDonor: false
@@ -62,18 +65,20 @@ export function DonorForm() {
       // Format the date for PostgreSQL (YYYY-MM-DD)
       const formattedDate = formData.dateOfBirth ? format(formData.dateOfBirth, 'yyyy-MM-dd') : null;
       
+      if (!formData.bloodType || !formattedDate) {
+        throw new Error("Blood type and date of birth are required");
+      }
+
       const { data, error } = await supabase
         .from('donors')
-        .insert([
-          {
-            full_name: formData.fullName,
-            email: formData.email,
-            phone_number: formData.phoneNumber,
-            blood_type: formData.bloodType,
-            date_of_birth: formattedDate,
-            previous_donor: formData.previousDonor,
-          }
-        ]);
+        .insert({
+          full_name: formData.fullName,
+          email: formData.email,
+          phone_number: formData.phoneNumber,
+          blood_type: formData.bloodType,
+          date_of_birth: formattedDate,
+          previous_donor: formData.previousDonor,
+        });
     
       if (error) {
         console.error("Error submitting donor form:", error);
@@ -232,7 +237,7 @@ export function DonorForm() {
                     </Label>
                     <Select 
                       value={formData.bloodType}
-                      onValueChange={(value) => {
+                      onValueChange={(value: BloodType | "") => {
                         setFormData({...formData, bloodType: value});
                         if (formErrors.bloodType) {
                           setFormErrors({...formErrors, bloodType: ""});
@@ -251,7 +256,6 @@ export function DonorForm() {
                         <SelectItem value="AB-">AB-</SelectItem>
                         <SelectItem value="O+">O+</SelectItem>
                         <SelectItem value="O-">O-</SelectItem>
-                        <SelectItem value="Unknown">I don't know</SelectItem>
                       </SelectContent>
                     </Select>
                     {formErrors.bloodType && (

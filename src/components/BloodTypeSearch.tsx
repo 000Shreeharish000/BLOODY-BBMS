@@ -8,22 +8,25 @@ import { Search, MapPin, Droplet } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Database } from "@/integrations/supabase/types";
 
-const bloodTypes = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+type BloodType = Database["public"]["Enums"]["blood_type"];
+
+const bloodTypes: BloodType[] = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 const locations = ["New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia"];
 
 interface BloodInventoryResult {
   id: string;
   blood_bank: string;
   address: string;
-  blood_type: string;
+  blood_type: BloodType;
   units: number;
   distance: string;
 }
 
 export function BloodTypeSearch() {
   const { toast } = useToast();
-  const [bloodType, setBloodType] = useState("");
+  const [bloodType, setBloodType] = useState<BloodType | "">("");
   const [location, setLocation] = useState("");
   const [searchResults, setSearchResults] = useState<BloodInventoryResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -37,7 +40,7 @@ export function BloodTypeSearch() {
         .select('*');
       
       if (bloodType) {
-        query = query.eq('blood_type', bloodType);
+        query = query.eq('blood_type', bloodType as BloodType);
       }
       
       const { data, error } = await query;
@@ -99,7 +102,7 @@ export function BloodTypeSearch() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div className="space-y-2">
                   <Label htmlFor="bloodType">Blood Type</Label>
-                  <Select value={bloodType} onValueChange={setBloodType}>
+                  <Select value={bloodType} onValueChange={(value: BloodType | "") => setBloodType(value)}>
                     <SelectTrigger id="bloodType">
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
