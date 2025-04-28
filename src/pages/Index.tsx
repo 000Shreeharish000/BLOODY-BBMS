@@ -1,13 +1,32 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import { ThemeProvider } from "@/hooks/use-theme";
+import Navbar from "@/components/Navbar";
+import Hero from "@/components/Hero";
+import Features from "@/components/Features";
+import BloodTypeSearch from "@/components/BloodTypeSearch";
+import BloodInventory from "@/components/BloodInventory";
+import DonorForm from "@/components/DonorForm";
+import TestimonialSection from "@/components/TestimonialSection";
+import CTA from "@/components/CTA";
+import Footer from "@/components/Footer";
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
+    <ThemeProvider>
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-1 pt-16">
+          <Hero />
+          <Features />
+          <BloodTypeSearch />
+          <BloodInventory />
+          <DonorForm />
+          <TestimonialSection />
+          <CTA />
+        </main>
+        <Footer />
       </div>
-    </div>
+    </ThemeProvider>
   );
 };
 
